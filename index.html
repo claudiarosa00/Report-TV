@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pós-Avaliação TV</title>
+<meta name="description" content="Dashboard de pós-avaliação de campanhas de televisão: plano de media vs. emissões e audiências reais.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<!-- Dependências externas (CDN): Chart.js (gráficos) e SheetJS (leitura/escrita Excel) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="detail">
+<div class="app">
+  <!-- ============ Navegação lateral ============ -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="5" width="19" height="13" rx="2"/><path d="M8 21h8M7 14l3-3 2.5 2L17 8.5"/></svg></div>
+      <div><b>TV Post-Buy</b><span>Pós-avaliação de campanhas</span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-title">Relatório</div>
+      <a href="#resumo" class="active"><span class="ix">01</span>Resumo executivo</a>
+      <a href="#faixas"><span class="ix">02</span>Faixas horárias</a>
+      <a href="#canais"><span class="ix">03</span>Canais</a>
+      <a href="#secundagem"><span class="ix">04</span>Secundagem</a>
+      <a href="#evolucao"><span class="ix">05</span>Evolução e dias</a>
+      <a href="#cruzada"><span class="ix">06</span>Canal × faixa</a>
+      <a href="#eficiencia"><span class="ix">07</span>Eficiência</a>
+      <a href="#qualidade"><span class="ix">08</span>Qualidade de entrega</a>
+      <a href="#contributo"><span class="ix">09</span>Contributo p/ desvio</a>
+      <a href="#oportunidades"><span class="ix">10</span>Oportunidades</a>
+      <div class="nav-title">Conclusões</div>
+      <a href="#analise"><span class="ix">11</span>Análise e comentários</a>
+      <a href="#dados"><span class="ix">12</span>Dados e metodologia</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="nav-title seg-label">Visão</div>
+      <div class="seg block" id="viewSeg"><button data-v="exec">Executiva</button><button data-v="detail" class="on">Detalhada</button></div>
+      <div class="nav-title seg-label">Tema</div>
+      <div class="seg block" id="themeSeg"><button data-t="auto" class="on">Auto</button><button data-t="light">Claro</button><button data-t="dark">Escuro</button></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- ============ Cabeçalho ============ -->
+    <header class="topbar">
+      <div>
+        <h1 id="campTitle">Relatório de Performance — Campanha TV</h1>
+        <div class="sub" id="campSub"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btnImport" data-tip="Importar plano, emissões e cobertura (CSV ou Excel)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Importar</button>
+        <button class="btn" id="btnXlsx" data-tip="Exporta todas as tabelas de análise + dados brutos para Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Excel</button>
+        <button class="btn" id="btnPdf" data-tip="Gera o relatório em PDF através da janela de impressão (escolha 'Guardar como PDF')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>PDF</button>
+        <button class="btn primary" id="btnPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7"/></svg>Imprimir</button>
+      </div>
+    </header>
+
+    <!-- ============ Filtros globais ============ -->
+    <section class="filters" id="filters" aria-label="Filtros">
+      <div class="f-item"><label for="fFrom">De</label><input type="date" class="f-ctl" id="fFrom"></div>
+      <div class="f-item"><label for="fTo">Até</label><input type="date" class="f-ctl" id="fTo"></div>
+      <div class="f-item"><label>Canal</label><div id="fChannel"></div></div>
+      <div class="f-item"><label>Faixa horária</label><div id="fDaypart"></div></div>
+      <div class="f-item"><label>Secundagem</label><div id="fDuration"></div></div>
+      <div class="f-item"><label>Dia da semana</label><div id="fDow"></div></div>
+      <div class="f-item"><label for="fTarget">Target</label><select class="f-ctl" id="fTarget"></select></div>
+      <div class="f-item"><label for="fInd">Indicador</label><select class="f-ctl" id="fInd">
+        <option value="grp">GRPs</option><option value="spots">Spots</option><option value="cost">Investimento</option>
+        <option value="rating">Rating médio</option><option value="cpp">CPP</option><option value="cpm">CPM</option></select></div>
+      <div class="f-item detail-only"><label for="fAttr">Atribuição <i class="info" data-tip="Por emissão real: o realizado conta no canal/faixa/secundagem onde foi efetivamente emitido. Por linha de compra: conta na linha do plano que lhe deu origem (útil para avaliar cada compra).">i</i></label>
+        <select class="f-ctl" id="fAttr"><option value="aired">Por emissão real</option><option value="bought">Por linha de compra</option></select></div>
+      <div class="f-sep"></div>
+      <button class="btn ghost" id="btnReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Repor filtros</button>
+      <div class="active-filters" id="activeFilters"></div>
+    </section>
+    <div class="only-print" id="printFilters" style="font-size:11px;color:#555;margin:0 0 8px"></div>
+
+    <div class="content">
+      <!-- 01 RESUMO EXECUTIVO -->
+      <section class="sec" id="resumo">
+        <div class="section-head"><div><h2><span class="ix">01</span>Resumo executivo</h2><p>Planeado vs. realizado para os filtros ativos. Cada indicador mostra o valor realizado, o planeado, a diferença absoluta e o desvio percentual.</p></div></div>
+        <div class="kpi-grid" id="kpis"></div>
+        <div class="comp-grid" id="compliance"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-head"><div><h3>Respostas-chave</h3><div class="hint">Leitura rápida gerada a partir dos dados filtrados</div></div></div>
+          <div class="qa" id="qa"></div>
+        </div>
+        <div class="sec-comments" data-sec="resumo"></div>
+      </section>
+
+      <!-- 02 FAIXAS HORÁRIAS -->
+      <section class="sec" id="faixas">
+        <div class="section-head"><div><h2><span class="ix">02</span>Análise por faixa horária <span class="prio">Prioridade máxima</span></h2>
+          <p>A campanha foi comprada por faixa horária. Separa-se o <b>desvio de entrega</b> (nº de spots) do <b>desvio de audiência</b> (rating médio por spot): uma faixa pode cumprir as inserções e gerar menos GRPs.</p></div></div>
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>GRPs por faixa — planeado vs realizado</h3><div class="hint" id="dpGrpHint"></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chDpGrp"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>Desvio de entrega vs desvio de audiência</h3><div class="hint">Variação % de spots e de rating médio face ao plano</div></div></div>
+            <div class="legend"><span><i style="background:var(--fx-volume)"></i>Entrega (spots)</span><span><i style="background:var(--fx-audience)"></i>Audiência (rating médio)</span></div>
+            <div class="chart-box"><canvas id="chDpDev"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>Decomposição do desvio de GRPs</h3><div class="hint">Efeito volume = Δspots × rating planeado · Efeito audiência = spots reais × Δrating</div></div></div>
+            <div class="legend"><span><i style="background:var(--fx-volume)"></i>Efeito volume (spots)</span><span><i style="background:var(--fx-audience)"></i>Efeito audiência (rating)</span></div>
+            <div class="chart-box"><canvas id="chDpFx"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>Peso da faixa — plano vs real</h3><div class="hint">% do total da campanha</div></div>
+            <div class="card-tools"><div class="seg" id="dpShareSeg"><button data-m="spots" class="on">Spots</button><button data-m="grp">GRPs</button><button data-m="cost">Invest.</button></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Plano</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chDpShare"></canvas></div></div>
+          <div class="card span2"><div class="card-head"><div><h3>Matriz de eficiência — faixa × dia da semana</h3><div class="hint" id="hmDpDowHint"></div></div>
+            <div class="card-tools"><div class="seg" id="hmDpDowSeg"><button data-m="dev" class="on">Desvio vs plano</button><button data-m="abs">Valor realizado</button></div></div></div>
+            <div id="hmDpDow"></div></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Tabela por faixa horária</h3><div class="hint">Desvios acima da tolerância destacados</div></div></div><div id="tbDp"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="faixas"></div>
+      </section>
+
+      <!-- 03 CANAIS -->
+      <section class="sec" id="canais">
+        <div class="section-head"><div><h2><span class="ix">03</span>Análise por canal</h2><p>Distribuição de investimento e spots, GRPs, rating e CPP por canal, com classificação de desempenho e contributo para o resultado global.</p></div></div>
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>GRPs por canal</h3><div class="hint">Planeado vs realizado</div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chChGrp"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>Distribuição por canal — plano vs real</h3><div class="hint">% do total</div></div>
+            <div class="card-tools"><div class="seg" id="chShareSeg"><button data-m="cost" class="on">Investimento</button><button data-m="spots">Spots</button><button data-m="grp">GRPs</button></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Plano</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chChShare"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>CPP por canal</h3><div class="hint">Menor é melhor</div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chChCpp"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>Desvio de GRPs por canal</h3><div class="hint">Verde/vermelho fora da tolerância; cinzento dentro</div></div></div>
+            <div class="chart-box"><canvas id="chChDev"></canvas></div></div>
+          <div class="card span2"><div class="card-head"><div><h3>Classificação de desempenho dos canais</h3><div class="hint">Pontuação = 40% eficiência de custo + 35% audiência vs plano + 25% cumprimento de GRPs (100 = em linha)</div></div></div><div id="tbCh"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="canais"></div>
+      </section>
+
+      <!-- 04 SECUNDAGEM -->
+      <section class="sec" id="secundagem">
+        <div class="section-head"><div><h2><span class="ix">04</span>Análise por secundagem</h2><p>Duração, entrega de audiência e custo são analisados separadamente: um spot mais longo <b>não</b> gera, por si só, mais audiência — o rating mede a audiência média do intervalo onde o spot é emitido.</p></div></div>
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>Spots por formato</h3><div class="hint">Planeado vs realizado</div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box short"><canvas id="chDuSpots"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>GRPs por formato</h3><div class="hint" id="duGrpHint">GRPs brutos</div></div>
+            <div class="card-tools"><div class="seg" id="duGrpSeg"><button data-m="grp" class="on">GRPs</button><button data-m="eq30">Eq. 30"</button></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box short"><canvas id="chDuGrp"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>Rating médio por formato</h3><div class="hint">Audiência por spot — independente da duração</div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box short"><canvas id="chDuRating"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>CPP por formato</h3><div class="hint" id="duCppHint"></div></div>
+            <div class="card-tools"><div class="seg" id="duCppSeg"><button data-m="cpp" class="on">CPP</button><button data-m="eq30">CPP eq. 30"</button></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box short"><canvas id="chDuCpp"></canvas></div></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Tabela por secundagem</h3><div class="hint" id="duRule"></div></div></div><div id="tbDu"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="secundagem"></div>
+      </section>
+
+      <!-- 05 EVOLUÇÃO -->
+      <section class="sec" id="evolucao">
+        <div class="section-head"><div><h2><span class="ix">05</span>Evolução temporal e dia da semana</h2><p>Comparação diária/semanal e acumulada para identificar períodos de subentrega ou sobreentrega. O indicador segue o filtro <b>Indicador</b>.</p></div></div>
+        <div class="grid g2">
+          <div class="card span2"><div class="card-head"><div><h3 id="evoTitle">Evolução</h3><div class="hint">Planeado (tracejado) vs realizado</div></div>
+            <div class="card-tools"><div class="seg" id="evoSeg"><button data-g="date" class="on">Diário</button><button data-g="week">Semanal</button></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chEvo"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3 id="cumTitle">Evolução acumulada</h3><div class="hint" id="cumHint"></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chCum"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3 id="dowTitle">Por dia da semana</h3><div class="hint">Segunda a domingo</div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chDow"></canvas></div></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Tabela por dia da semana</h3></div></div><div id="tbDow"></div></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Tabela semanal</h3></div></div><div id="tbWeek"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="evolucao"></div>
+      </section>
+
+      <!-- 06 CANAL × FAIXA -->
+      <section class="sec" id="cruzada">
+        <div class="section-head"><div><h2><span class="ix">06</span>Canal × faixa horária</h2><p>Matriz cruzada para perceber se os desvios se concentram num canal, numa faixa ou numa combinação específica.</p></div></div>
+        <div class="card"><div class="card-head"><div><h3>Matriz cruzada</h3><div class="hint" id="hmChDpHint"></div></div>
+          <div class="card-tools"><select class="f-ctl" id="hmChDpMetric">
+            <option value="grpDev">Desvio de GRPs (%)</option><option value="grpAbs">Desvio de GRPs (absoluto)</option><option value="spotDev">Desvio de spots (%)</option>
+            <option value="ratingDev">Desvio de rating médio (%)</option><option value="cppDev">Desvio de CPP (%)</option><option value="cppR">CPP realizado (€)</option><option value="grpR">GRPs realizados</option></select></div></div>
+          <div id="hmChDp"></div>
+          <p class="note" id="concNote"></p>
+        </div>
+        <div class="sec-comments" data-sec="cruzada"></div>
+      </section>
+
+      <!-- 07 EFICIÊNCIA -->
+      <section class="sec" id="eficiencia">
+        <div class="section-head"><div><h2><span class="ix">07</span>Eficiência de investimento</h2><p>CPP e CPM por dimensão. Eficiência de custo <b>não</b> é o mesmo que cumprimento contratual: uma faixa pode ser barata por ponto e, ainda assim, não ter entregue o que foi comprado.</p></div>
+          <div class="seg" id="effSeg"><button data-d="channel" class="on">Canal</button><button data-d="daypart">Faixa</button><button data-d="duration">Secundagem</button></div></div>
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>CPP — planeado vs realizado <i class="info" data-tip="Cost per Point: investimento ÷ GRPs no target selecionado. Menor é melhor.">i</i></h3></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chEffCpp"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>CPM — planeado vs realizado <i class="info" data-tip="Cost per Mille: investimento ÷ (contactos ÷ 1000). Contactos = rating × universo do target. Indisponível se o universo do target não estiver definido.">i</i></h3><div class="hint" id="cpmHint"></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box"><canvas id="chEffCpm"></canvas></div></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Mapa de eficiência — canal × faixa</h3><div class="hint">Cada bolha é uma combinação; tamanho = investimento realizado; cor = canal. Canto inferior direito = mais audiência a menor custo.</div></div></div>
+            <div class="legend" id="bubbleLegend"></div>
+            <div class="chart-box tall"><canvas id="chBubble"></canvas></div></div>
+        </div>
+        <div class="sec-comments" data-sec="eficiencia"></div>
+      </section>
+
+      <!-- 08 QUALIDADE -->
+      <section class="sec" id="qualidade">
+        <div class="section-head"><div><h2><span class="ix">08</span>Qualidade de entrega</h2><p>Emissões contratualmente válidas vs. emissões fora das condições acordadas (fora de faixa, substituições, desvios de secundagem), spots não emitidos, adicionais e compensações.</p></div></div>
+        <div class="kpi-grid" id="qTiles"></div>
+        <div class="grid g2" style="margin-top:16px">
+          <div class="card"><div class="card-head"><div><h3>Estado das emissões por canal</h3><div class="hint">Nº de spots (inclui não emitidos)</div></div></div>
+            <div class="legend" id="qLegend"></div>
+            <div class="chart-box"><canvas id="chQ"></canvas></div></div>
+          <div class="card"><div class="card-head"><div><h3>GRPs válidos vs fora de condições</h3><div class="hint">Por canal</div></div></div>
+            <div class="legend"><span><i style="background:var(--real)"></i>GRPs válidos</span><span><i style="background:var(--warn)"></i>GRPs fora de condições</span></div>
+            <div class="chart-box"><canvas id="chQGrp"></canvas></div></div>
+          <div class="card span2"><div class="card-head"><div><h3>Registo de exceções</h3><div class="hint">Spots não emitidos, fora de condições, adicionais e compensações</div></div>
+            <div class="card-tools"><select class="f-ctl" id="qStatus"></select></div></div><div id="tbQ"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="qualidade"></div>
+      </section>
+
+      <!-- 09 CONTRIBUTO -->
+      <section class="sec" id="contributo">
+        <div class="section-head"><div><h2><span class="ix">09</span>Contributo para o desvio global</h2><p>Que canais, faixas e formatos explicam a diferença entre o planeado e o realizado.</p></div>
+          <div class="seg" id="wfSeg"><button data-d="channel" class="on">Canal</button><button data-d="daypart">Faixa</button><button data-d="duration">Secundagem</button><button data-d="dow">Dia</button></div></div>
+        <div class="grid g2">
+          <div class="card span2"><div class="card-head"><div><h3 id="wfTitle">Waterfall</h3><div class="hint" id="wfHint"></div></div></div>
+            <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--good)"></i>Contributo positivo</span><span><i style="background:var(--bad)"></i>Contributo negativo</span><span><i style="background:var(--real)"></i>Realizado</span></div>
+            <div class="chart-box tall"><canvas id="chWf"></canvas></div></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Contributos ordenados</h3></div></div><div id="tbWf"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="contributo"></div>
+      </section>
+
+      <!-- 10 OPORTUNIDADES -->
+      <section class="sec" id="oportunidades">
+        <div class="section-head"><div><h2><span class="ix">10</span>Ranking de oportunidades</h2><p>Combinações canal × faixa ordenadas pelo potencial de otimização, combinando audiência (rating vs plano), custo (CPP vs média da campanha) e cumprimento do plano.</p></div></div>
+        <div class="card"><div class="card-head"><div><h3>Combinações canal × faixa</h3><div class="hint" id="oppHint"></div></div>
+          <div class="card-tools"><div class="seg" id="oppSeg"><button data-f="all" class="on">Todas</button><button data-f="Reforçar">Reforçar</button><button data-f="Reduzir / renegociar">Reduzir</button><button data-f="Exigir compensação">Compensação</button></div></div></div>
+          <div id="tbOpp"></div>
+        </div>
+        <div class="sec-comments" data-sec="oportunidades"></div>
+      </section>
+
+      <!-- 11 ANÁLISE E COMENTÁRIOS -->
+      <section class="sec" id="analise">
+        <div class="section-head"><div><h2><span class="ix">11</span>Análise e comentários</h2><p>Conclusões automáticas (geradas a partir dos valores apresentados), comentários do analista e recomendações para futuras campanhas.</p></div></div>
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>A. Principais conclusões</h3><div class="hint">Atualizadas com os filtros ativos</div></div></div>
+            <ul class="insights" id="concl"></ul></div>
+          <div class="card"><div class="card-head"><div><h3>B. Comentários do analista</h3><div class="hint">Guardados localmente neste browser</div></div></div>
+            <div class="form-row no-print">
+              <div class="f-item"><label for="cSec">Associar à secção</label><select class="f-ctl" id="cSec"></select></div>
+              <div class="f-item"><label for="cAuthor">Autor</label><input class="f-ctl" id="cAuthor" placeholder="Nome (opcional)"></div>
+            </div>
+            <textarea class="f-ctl no-print" id="cText" placeholder="Comentário, justificação, observação ou recomendação…"></textarea>
+            <div class="form-row no-print" style="margin-top:8px;justify-content:flex-end"><button class="btn primary" id="cSave">Guardar comentário</button></div>
+            <div class="comment-list" id="cList"></div></div>
+          <div class="card span2"><div class="card-head"><div><h3>C. Recomendações para futuras campanhas</h3><div class="hint">Evidência observada → interpretação → ação recomendada</div></div></div>
+            <div id="recoAuto"></div>
+            <div id="recoUser"></div>
+            <details class="no-print" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600;font-size:13px">+ Adicionar recomendação do analista</summary>
+              <div class="grid g3" style="margin-top:10px">
+                <div class="f-item"><label for="rEv">Evidência observada</label><textarea class="f-ctl" id="rEv"></textarea></div>
+                <div class="f-item"><label for="rInt">Interpretação do resultado</label><textarea class="f-ctl" id="rInt"></textarea></div>
+                <div class="f-item"><label for="rAct">Ação recomendada</label><textarea class="f-ctl" id="rAct"></textarea></div>
+              </div>
+              <div class="form-row" style="margin-top:8px;justify-content:flex-end"><button class="btn primary" id="rSave">Guardar recomendação</button></div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 DADOS -->
+      <section class="sec" id="dados">
+        <div class="section-head"><div><h2><span class="ix">12</span>Dados e metodologia</h2><p>Importação de ficheiros, configuração da estrutura de compra e regras de cálculo.</p></div></div>
+        <div class="grid g2">
+          <div class="card no-print"><div class="card-head"><div><h3>Importar dados</h3><div class="hint">CSV ou Excel — plano de media, registo de emissões e (opcional) cobertura</div></div></div>
+            <div class="dropzone" id="drop">Arraste ficheiros para aqui ou <b>clique para escolher</b><br><span class="t-mute" style="font-size:12px">Aceita vários ficheiros CSV ou um .xlsx com folhas Plano / Emissoes / Cobertura</span></div>
+            <input type="file" id="fileIn" multiple accept=".csv,.txt,.xlsx,.xls" hidden>
+            <div class="msg" id="importMsg"></div>
+            <div class="form-row" style="margin-top:12px">
+              <button class="btn" id="btnTemplate">⇩ Modelo de importação (.xlsx)</button>
+              <button class="btn" id="btnDemo">↺ Repor dados de demonstração</button>
+            </div></div>
+          <div class="card no-print"><div class="card-head"><div><h3>Estrutura de compra</h3><div class="hint">Adapte as faixas horárias e a tolerância à estrutura real da campanha</div></div></div>
+            <div class="form-row">
+              <div class="f-item" style="flex:3"><label for="dpStarts">Início das faixas (HH:MM, separadas por vírgula)</label><input class="f-ctl" id="dpStarts"></div>
+              <div class="f-item"><label for="dpEnd">Fim da última faixa</label><input class="f-ctl" id="dpEnd"></div>
+            </div>
+            <div class="form-row">
+              <div class="f-item"><label for="tolIn">Tolerância de desvio (± %)</label><input class="f-ctl" id="tolIn" type="number" min="0" max="50" step="1"></div>
+              <div class="f-item"><label for="primeIn">Início do prime time</label><input class="f-ctl" id="primeIn"></div>
+              <button class="btn primary" id="btnApplyCfg">Aplicar</button>
+            </div>
+            <div class="msg" id="cfgMsg"></div></div>
+          <div class="card span2"><div class="card-head"><div><h3>Regras de cálculo</h3></div></div>
+            <dl class="method" id="method"></dl></div>
+          <div class="card span2 detail-only"><div class="card-head"><div><h3>Registo de spots (plano e emissões)</h3><div class="hint">Dados filtrados — linha a linha</div></div>
+            <div class="card-tools"><div class="seg" id="logSeg"><button data-k="real" class="on">Emissões</button><button data-k="plan">Plano</button></div></div></div><div id="tbLog"></div></div>
+        </div>
+      </section>
+      <footer class="note" id="footNote" style="text-align:center"></footer>
+    </div>
+  </div>
+</div>
+<div id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<!-- Código da aplicação (ordem importa) -->
+<script src="assets/js/config.js"></script>
+<script src="assets/js/demo-data.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/insights.js"></script>
+<script src="assets/js/io.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
