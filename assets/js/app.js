@@ -17,9 +17,9 @@
   /* ---------- estado ---------- */
   const S = {
     raw: null, model: null,
-    f: { from: null, to: null, channels: [], dayparts: [], durations: [], dows: [] },
-    target: cfg.buyTarget, ind: 'grp', attr: 'aired', view: 'detail', theme: 'auto',
-    ui: { dpShare: 'spots', hmDpDow: 'dev', chShare: 'cost', duGrp: 'grp', duCpp: 'cpp', evo: 'date', eff: 'channel', wf: 'channel', opp: 'all', log: 'real', qStatus: 'all', hmChDp: 'grpDev' }
+    f: { from: null, to: null, channels: [], dayparts: [], durations: [], dows: [], weeks: [] },
+    target: cfg.buyTarget, ind: 'grp', attr: 'aired', view: 'client', theme: 'auto',
+    ui: { dpShare: 'spots', hmDpDow: 'dev', chShare: 'cost', duGrp: 'grp', duCpp: 'cpp', evo: 'date', eff: 'channel', wf: 'channel', opp: 'all', log: 'real', qStatus: 'all', hmChDp: 'grpDev', cd: { channel: 'grp', daypart: 'grp', duration: 'grp', week: 'grp' } }
   };
   let ctx = null;
   const ms = {};
@@ -118,12 +118,12 @@
    * ============================================================ */
   function kpiTile(o) {
     if (o.na) {
-      return '<div class="kpi na"><div class="kpi-label"><span>' + U.esc(o.label) + U.info(o.tip) + '</span><span class="badge na">n.d.</span></div>' +
+      return '<div class="kpi na' + (o.tech ? ' tech-only' : '') + '"><div class="kpi-label"><span>' + U.esc(o.label) + U.info(o.tip) + '</span><span class="badge na">n.d.</span></div>' +
         '<div class="kpi-value">Indisponível</div><div class="kpi-plan"><span>' + U.esc(o.naText) + '</span></div></div>';
     }
     const d = E.dev(o.r, o.p), pct = E.devPct(o.r, o.p);
     const ratio = isNum(o.r) && isNum(o.p) && o.p > 0 ? Math.max(0, Math.min(1.5, o.r / o.p)) : null;
-    return '<div class="kpi' + (o.hero ? ' hero' : '') + '">' +
+    return '<div class="kpi' + (o.hero ? ' hero' : '') + (o.tech ? ' tech-only' : '') + '">' +
       '<div class="kpi-label"><span>' + U.esc(o.label) + (o.tip ? U.info(o.tip) : '') + '</span>' + U.badge(pct, o.dir) + '</div>' +
       '<div class="kpi-value">' + o.f(o.r) + '</div>' +
       '<div class="kpi-plan"><span>Plano ' + o.f(o.p) + '</span><span>Δ ' + (o.fd ? o.fd(d) : F.signed(d, o.dec || 0)) + '</span></div>' +
@@ -140,22 +140,22 @@
     const tiles = [
       { label: 'Investimento', tip: 'Custo líquido planeado vs faturado (compensações a custo zero).', r: s.r.cost, p: s.p.cost, dir: 'neutral', f: (v) => F.eur(v), fd: (v) => F.signed(v, 0, ' €') },
       { label: 'GRPs · ' + t.label, tip: 'Gross Rating Points = soma dos ratings (%) de todos os spots no target selecionado.', r: s.r.grp, p: s.p.grp, dir: 'higher', f: (v) => F.n(v, 1), dec: 1, hero: true },
-      { label: 'TRPs · ' + bt.label, tip: 'Target Rating Points = soma dos ratings no target de compra da campanha (' + bt.label + ').' + (S.target === cfg.buyTarget ? ' O target selecionado é o target de compra, pelo que TRPs = GRPs.' : ''), r: s.rT.grp, p: s.pT.grp, dir: 'higher', f: (v) => F.n(v, 1), dec: 1 },
+      { tech: true, label: 'TRPs · ' + bt.label, tip: 'Target Rating Points = soma dos ratings no target de compra da campanha (' + bt.label + ').' + (S.target === cfg.buyTarget ? ' O target selecionado é o target de compra, pelo que TRPs = GRPs.' : ''), r: s.rT.grp, p: s.pT.grp, dir: 'higher', f: (v) => F.n(v, 1), dec: 1 },
       { label: 'Nº de spots', tip: 'Spots emitidos (inclui adicionais, compensações e emissões fora de condições) vs planeados.', r: s.r.spots, p: s.p.spots, dir: 'higher', f: (v) => F.n(v) },
-      { label: 'Audiência média por spot', tip: 'Contactos médios por spot = rating médio × universo do target (' + F.n(t.universe || 0) + ' ind.).', r: aud(s.r), p: aud(s.p), dir: 'higher', f: (v) => F.compact(v), fd: (v) => F.signed(v, 0), na: !t.universe, naText: 'Universo do target não definido.' },
+      { tech: true, label: 'Audiência média por spot', tip: 'Contactos médios por spot = rating médio × universo do target (' + F.n(t.universe || 0) + ' ind.).', r: aud(s.r), p: aud(s.p), dir: 'higher', f: (v) => F.compact(v), fd: (v) => F.signed(v, 0), na: !t.universe, naText: 'Universo do target não definido.' },
       { label: 'Rating médio', tip: 'GRPs ÷ nº de spots com audiência.', r: rating(s.r), p: rating(s.p), dir: 'higher', f: (v) => F.n(v, 2) + '%', fd: (v) => F.signed(v, 2, ' p.p.') },
       s.reach.available
         ? { label: 'Cobertura 1+', tip: '% do target exposto pelo menos uma vez. Valor deduplicado do software de audiências (não é soma de canais/faixas).', r: s.reach.real.r1, p: s.reach.plan.r1, dir: 'higher', f: (v) => F.pct(v), fd: (v) => F.signed(v, 1, ' p.p.') }
         : { label: 'Cobertura 1+', tip: 'Requer dados deduplicados.', na: true, naText: s.reach.reason },
       s.reach.available && isNum(s.reach.real.r3)
-        ? { label: 'Cobertura 3+', tip: '% do target exposto 3 ou mais vezes (deduplicado).', r: s.reach.real.r3, p: s.reach.plan.r3, dir: 'higher', f: (v) => F.pct(v), fd: (v) => F.signed(v, 1, ' p.p.') }
-        : { label: 'Cobertura 3+', tip: 'Requer dados deduplicados.', na: true, naText: s.reach.reason || 'Sem dados de cobertura 3+.' },
+        ? { tech: true, label: 'Cobertura 3+', tip: '% do target exposto 3 ou mais vezes (deduplicado).', r: s.reach.real.r3, p: s.reach.plan.r3, dir: 'higher', f: (v) => F.pct(v), fd: (v) => F.signed(v, 1, ' p.p.') }
+        : { tech: true, label: 'Cobertura 3+', tip: 'Requer dados deduplicados.', na: true, naText: s.reach.reason || 'Sem dados de cobertura 3+.' },
       s.reach.available
-        ? { label: 'Frequência média', tip: 'GRPs ÷ Cobertura 1+ (mesmo target, total da campanha).', r: s.reach.freqR, p: s.reach.freqP, dir: 'neutral', f: (v) => F.n(v, 1), dec: 1 }
-        : { label: 'Frequência média', tip: 'Requer cobertura deduplicada.', na: true, naText: 'Não calculável sem cobertura deduplicada.' },
+        ? { tech: true, label: 'Frequência média', tip: 'GRPs ÷ Cobertura 1+ (mesmo target, total da campanha).', r: s.reach.freqR, p: s.reach.freqP, dir: 'neutral', f: (v) => F.n(v, 1), dec: 1 }
+        : { tech: true, label: 'Frequência média', tip: 'Requer cobertura deduplicada.', na: true, naText: 'Não calculável sem cobertura deduplicada.' },
       { label: 'CPP', tip: 'Cost per Point = investimento ÷ GRPs. Menor é melhor.', r: E.div(s.r.cost, s.r.grp), p: E.div(s.p.cost, s.p.grp), dir: 'lower', f: (v) => F.eur(v), fd: (v) => F.signed(v, 0, ' €') },
-      { label: 'CPM', tip: 'Cost per Mille = investimento ÷ (contactos ÷ 1000). Menor é melhor.', r: cpm(s.r), p: cpm(s.p), dir: 'lower', f: (v) => F.eur(v, 2), fd: (v) => F.signed(v, 2, ' €'), na: !t.universe, naText: 'Universo do target não definido.' },
-      { label: 'Segundos emitidos', tip: 'Soma das durações dos spots.', r: s.r.seconds, p: s.p.seconds, dir: 'neutral', f: (v) => F.n(v) + ' s', fd: (v) => F.signed(v, 0, ' s') }
+      { tech: true, label: 'CPM', tip: 'Cost per Mille = investimento ÷ (contactos ÷ 1000). Menor é melhor.', r: cpm(s.r), p: cpm(s.p), dir: 'lower', f: (v) => F.eur(v, 2), fd: (v) => F.signed(v, 2, ' €'), na: !t.universe, naText: 'Universo do target não definido.' },
+      { tech: true, label: 'Segundos emitidos', tip: 'Soma das durações dos spots.', r: s.r.seconds, p: s.p.seconds, dir: 'neutral', f: (v) => F.n(v) + ' s', fd: (v) => F.signed(v, 0, ' s') }
     ];
     $('kpis').innerHTML = tiles.map(kpiTile).join('');
 
@@ -164,6 +164,12 @@
     const gauge = (v, st) => '<div class="gauge"><b style="width:' + (isNum(v) ? Math.min(100, (v / 1.2) * 100) : 0) + '%;background:' + col[st] + '"></b><em></em></div><div class="gauge-scale"><span>0%</span><span>100%</span><span>120%</span></div>';
     const comp = (title, tip, desc, v, st) => '<div class="comp"><h4><span>' + title + ' ' + U.info(tip) + '</span>' + U.statusBadge(st, { pos: 'Acima', tol: 'Na tolerância', neg: 'Abaixo', na: 'n.d.' }[st]) + '</h4><div class="desc">' + desc + '</div><div class="big">' + (isNum(v) ? F.pct(v * 100, 1) : '—') + '</div>' + gauge(v, st) + '</div>';
     const verdict = { pos: ['Plano cumprido', 'var(--good)'], tol: ['Cumprido parcialmente', 'var(--warn)'], neg: ['Plano não cumprido', 'var(--bad)'], na: ['Indeterminado', 'var(--text-3)'] }[c.overall];
+    const vtxt = { pos: 'Plano cumprido', tol: 'Plano cumprido parcialmente', neg: 'Plano não cumprido', na: 'Sem dados suficientes' }[c.overall];
+    const vcol = { pos: 'var(--good)', tol: 'var(--warn)', neg: 'var(--bad)', na: 'var(--plan)' }[c.overall];
+    const gp = E.devPct(s.r.grp, s.p.grp), cp = E.devPct(E.div(s.r.cost, s.r.grp), E.div(s.p.cost, s.p.grp));
+    $('verdict').style.setProperty('--vcol', vcol);
+    $('verdict').innerHTML = '<b>' + vtxt + '</b><p>Foram entregues <b>' + F.n(s.r.grp, 1) + ' GRPs</b> (' + U.esc(ctx.targetLabel) + ') face a ' + F.n(s.p.grp, 1) + ' planeados (' + F.signedPct(gp) + '), com ' +
+      F.n(s.r.spots) + ' spots emitidos (' + F.n(s.p.spots) + ' planeados) e um custo por ponto de ' + F.eur(E.div(s.r.cost, s.r.grp)) + ' (' + F.signedPct(cp) + ' face ao plano).</p>';
     $('compliance').innerHTML =
       '<div class="comp overall"><h4><span>Cumprimento global do plano ' + U.info('Plano cumprido: as três dimensões estão acima ou dentro da tolerância. Parcial: uma abaixo. Não cumprido: duas ou mais abaixo.') + '</span></h4>' +
       '<div class="verdict"><span class="dot" style="background:' + verdict[1] + '"></span>' + verdict[0] + '</div>' +
@@ -173,6 +179,48 @@
       comp('Eficiência de custo', 'CPP planeado ÷ CPP realizado. Acima de 100% = cada ponto custou menos do que o previsto.', 'CPP planeado ÷ CPP realizado', c.costEff, c.parts[2]);
 
     $('qa').innerHTML = I.qa(ctx).map((q, i) => '<div class="qa-item"><span class="n">' + (i + 1) + '</span><div><b>' + U.esc(q[0]) + '</b><p>' + U.esc(q[1]) + '</p></div></div>').join('');
+  }
+
+  /* ============================================================
+   * VISTA CLIENTE — canal, faixa, secundagem e semana (planeado vs real)
+   * ============================================================ */
+  const CLIENT_DIMS = { channel: 'Canal', daypart: 'Faixa horária', duration: 'Secundagem', week: 'Semana' };
+  function renderClientDims() {
+    Object.keys(CLIENT_DIMS).forEach((dim) => {
+      const list = { channel: ctx.ch, daypart: ctx.dp, duration: ctx.du, week: ctx.wk }[dim];
+      const m = S.ui.cd[dim], d = indDef(m);
+      const P = (x) => E.val(x.p, m), R = (x) => E.val(x.r, m);
+      const unit = d.unit === '€' ? ' €' : '';
+      C.planReal('cd-' + dim, list.map((x) => x.label), list.map(P), list.map(R), (v) => F.ind(v, m, true), {
+        afterBody: (i) => ['Diferença: ' + F.signed(E.dev(R(list[i]), P(list[i])), d.dec, unit), 'Desvio: ' + F.signedPct(E.devPct(R(list[i]), P(list[i])))]
+      });
+
+      // Frase de leitura: total e maiores desvios
+      const totP = E.val(ctx.s.p, m), totR = E.val(ctx.s.r, m);
+      const cands = list.filter((x) => isNum(P(x)) && isNum(R(x)) && P(x) > 0).map((x) => ({ x, dv: R(x) - P(x), pct: E.devPct(R(x), P(x)) }));
+      const key = d.additive ? 'dv' : 'pct';
+      const lo = cands.slice().sort((a, b) => a[key] - b[key])[0], hi = cands.slice().sort((a, b) => b[key] - a[key])[0];
+      const part = (o, txt, cls) => '<span class="' + cls + '">' + U.esc(o.x.label) + '</span>' + txt + ' (' + (d.additive ? F.signed(o.dv, d.dec, unit) + ', ' : '') + F.signedPct(o.pct) + ')';
+      const loCls = d.dir === 'lower' ? 't-pos' : d.dir === 'neutral' ? '' : 't-neg';
+      const hiCls = d.dir === 'lower' ? 't-neg' : d.dir === 'neutral' ? '' : 't-pos';
+      const bits = [d.label + ' total: ' + F.ind(totP, m) + ' planeado → <b>' + F.ind(totR, m) + '</b> real (' + F.signedPct(E.devPct(totR, totP)) + ').'];
+      if (lo && lo[key] < 0) bits.push(d.dir === 'lower' ? 'Mais barato face ao plano: ' + part(lo, '', loCls) + '.' : 'Maior quebra: ' + part(lo, '', loCls) + '.');
+      if (hi && hi[key] > 0) bits.push(d.dir === 'lower' ? 'Mais caro face ao plano: ' + part(hi, '', hiCls) + '.' : 'Maior ganho: ' + part(hi, '', hiCls) + '.');
+      $('lead-' + dim).innerHTML = bits.join(' ');
+
+      const tp = list.reduce((a, x) => a + (P(x) || 0), 0), tr = list.reduce((a, x) => a + (R(x) || 0), 0);
+      list.forEach((x, i) => { x.sortKey = i; });
+      const cols = [
+        { key: 'k', label: CLIENT_DIMS[dim], align: 'l', raw: (r) => r.sortKey, html: (r) => (dim === 'channel' ? '<i style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;background:' + C.channelColor(r.label) + '"></i>' : '') + '<b>' + U.esc(r.label) + '</b>' },
+        { key: 'p', label: 'Planeado', raw: P, html: (r) => F.ind(P(r), m) },
+        { key: 'r', label: 'Real', raw: R, html: (r) => '<b>' + F.ind(R(r), m) + '</b>' },
+        { key: 'dv', label: 'Diferença', raw: (r) => E.dev(R(r), P(r)), html: (r) => F.signed(E.dev(R(r), P(r)), d.dec, unit) },
+        { key: 'pc', label: 'Desvio', raw: (r) => E.devPct(R(r), P(r)), html: (r) => U.badge(E.devPct(R(r), P(r)), d.dir) }
+      ];
+      if (d.additive) cols.push({ key: 'w', label: 'Peso plano → real', tip: '% do total planeado → % do total realizado', raw: (r) => (tr ? 100 * (R(r) || 0) / tr : null), html: (r) => F.pct(tp ? 100 * (P(r) || 0) / tp : null) + ' → ' + F.pct(tr ? 100 * (R(r) || 0) / tr : null), csv: 'Peso real %' });
+      const foot = { k: 'Total', p: F.ind(totP, m), r: '<b>' + F.ind(totR, m) + '</b>', dv: F.signed(E.dev(totR, totP), d.dec, unit), pc: U.badge(E.devPct(totR, totP), d.dir), w: '100%' };
+      U.table('cdt-' + dim, { columns: cols, rows: list, footer: foot, exportName: 'planeado_vs_real_' + dim + '_' + m, title: CLIENT_DIMS[dim] + ' ' + d.label });
+    });
   }
 
   /* ============================================================
@@ -527,14 +575,16 @@
   /* ============================================================
    * 11 — ANÁLISE E COMENTÁRIOS
    * ============================================================ */
-  const SECTIONS = [['geral', 'Geral'], ['resumo', 'Resumo executivo'], ['faixas', 'Faixas horárias'], ['canais', 'Canais'], ['secundagem', 'Secundagem'], ['evolucao', 'Evolução e dias'], ['cruzada', 'Canal × faixa'], ['eficiencia', 'Eficiência'], ['qualidade', 'Qualidade de entrega'], ['contributo', 'Contributo p/ desvio'], ['oportunidades', 'Oportunidades']];
+  const SECTIONS = [['geral', 'Geral'], ['resumo', 'Resumo'], ['v-channel', 'Por canal'], ['v-daypart', 'Por faixa horária'], ['v-duration', 'Por secundagem'], ['v-week', 'Por semana'], ['faixas', 'Técnico · Faixas'], ['canais', 'Técnico · Canais'], ['secundagem', 'Técnico · Secundagem'], ['evolucao', 'Evolução e dias'], ['cruzada', 'Canal × faixa'], ['eficiencia', 'Eficiência'], ['qualidade', 'Qualidade de entrega'], ['contributo', 'Contributo p/ desvio'], ['oportunidades', 'Oportunidades']];
   const secName = (k) => (SECTIONS.find((s) => s[0] === k) || [k, k])[1];
   const fmtTs = (ts) => new Date(ts).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' });
   function renderAnalysis() {
     const ICON = { pos: '▲', neg: '▼', tol: '●', warn: '!', info: 'i' };
     const items = I.conclusions(ctx);
-    $('concl').innerHTML = items.length ? items.map((c) => '<li><span class="ic ' + c.type + '">' + ICON[c.type] + '</span><div>' + U.esc(c.text) + '<span class="sec">' + U.esc(c.sec) + '</span></div></li>').join('') : '<li><span class="ic info">i</span><div>Sem dados suficientes para gerar conclusões com os filtros ativos.</div></li>';
-    $('recoAuto').innerHTML = ctx.recos.map((r) => recoHtml(r, 'Gerada automaticamente · ' + r.source)).join('') || '<p class="note">Sem recomendações automáticas para os filtros ativos.</p>';
+    const caps = { 'Resumo executivo': 2, 'Canais': 2, 'Faixas horárias': 1, 'Secundagem': 1, 'Semanas': 1, 'Eficiência': 1 }, used = {};
+    items.forEach((c) => { used[c.sec] = (used[c.sec] || 0) + 1; c.client = used[c.sec] <= (caps[c.sec] || 0); });
+    $('concl').innerHTML = items.length ? items.map((c) => '<li' + (c.client ? '' : ' class="tech-only"') + '><span class="ic ' + c.type + '">' + ICON[c.type] + '</span><div>' + U.esc(c.text) + '<span class="sec">' + U.esc(c.sec) + '</span></div></li>').join('') : '<li><span class="ic info">i</span><div>Sem dados suficientes para gerar conclusões com os filtros ativos.</div></li>';
+    $('recoAuto').innerHTML = ctx.recos.map((r, i) => (i < 3 ? '' : '<div class="tech-only">') + recoHtml(r, 'Gerada automaticamente · ' + r.source) + (i < 3 ? '' : '</div>')).join('') || '<p class="note">Sem recomendações automáticas para os filtros ativos.</p>';
     renderComments();
     renderUserRecos();
   }
@@ -588,6 +638,7 @@
     if (S.f.channels.length) parts.push('Canal: ' + S.f.channels.join(', '));
     if (S.f.dayparts.length) parts.push('Faixa: ' + S.f.dayparts.join(', '));
     if (S.f.durations.length) parts.push('Secundagem: ' + S.f.durations.map((d) => d + '"').join(', '));
+    if (S.f.weeks.length) parts.push('Semana: ' + S.f.weeks.join(', '));
     if (S.f.dows.length) parts.push('Dia: ' + S.f.dows.map((d) => cfg.weekdaysShort[d]).join(', '));
     const base = 'Target: ' + targetObj(S.target).label + ' · Indicador: ' + indDef(S.ind).label + (S.attr === 'bought' ? ' · Atribuição por linha de compra' : '');
     return { any: parts.length > 0, text: (parts.length ? 'Filtros ativos: ' + parts.join(' · ') + ' · ' : 'Sem filtros · ') + base };
@@ -620,7 +671,7 @@
     const af = activeFiltersText();
     $('activeFilters').textContent = af.text; $('activeFilters').classList.toggle('on', af.any);
     $('printFilters').textContent = af.text;
-    const steps = [renderHeader, renderSummary, renderDayparts, renderChannels, renderDurations, renderTime, renderCross, renderEfficiency, renderQuality, renderWaterfall, renderOpportunities, renderAnalysis, renderLog, renderMethod];
+    const steps = [renderHeader, renderSummary, renderClientDims, renderDayparts, renderChannels, renderDurations, renderTime, renderCross, renderEfficiency, renderQuality, renderWaterfall, renderOpportunities, renderAnalysis, renderLog, renderMethod];
     steps.forEach((fn) => { try { fn(); } catch (e) { console.error(fn.name, e); } });
   }
   let pending = null;
@@ -631,7 +682,7 @@
   function loadModel(raw) {
     S.raw = raw;
     S.model = E.normalize(raw);
-    S.f = { from: S.model.period.from, to: S.model.period.to, channels: [], dayparts: [], durations: [], dows: [] };
+    S.f = { from: S.model.period.from, to: S.model.period.to, channels: [], dayparts: [], durations: [], dows: [], weeks: [] };
     if (!cfg.targets.some((t) => t.code === S.target)) S.target = cfg.targets[0].code;
     ['fFrom', 'fTo'].forEach((id) => { $(id).min = S.model.period.from; $(id).max = S.model.period.to; });
     $('fFrom').value = S.f.from; $('fTo').value = S.f.to;
@@ -646,6 +697,7 @@
     ms.channels = U.multiselect($('fChannel'), { placeholder: 'Todos', options: () => cfg.channels.filter((c) => S.model.plan.some((r) => r.channel === c) || S.model.real.some((r) => r.channel === c)).map((c) => ({ value: c, label: c })), onChange: (v) => { S.f.channels = v; update(); } });
     ms.dayparts = U.multiselect($('fDaypart'), { placeholder: 'Todas', options: () => cfg.dayparts.map((d) => ({ value: d.code, label: d.label })).concat(S.model.real.some((r) => r.daypart === cfg.outOfGrid) ? [{ value: cfg.outOfGrid, label: cfg.outOfGrid }] : []), onChange: (v) => { S.f.dayparts = v; update(); } });
     ms.durations = U.multiselect($('fDuration'), { placeholder: 'Todas', options: () => cfg.durations.map((d) => ({ value: d, label: d + '"' })), onChange: (v) => { S.f.durations = v; update(); } });
+    ms.weeks = U.multiselect($('fWeek'), { placeholder: 'Todas', options: () => S.model.weeks.map((w) => ({ value: w, label: w })), onChange: (v) => { S.f.weeks = v; update(); } });
     ms.dows = U.multiselect($('fDow'), { placeholder: 'Todos', options: () => cfg.weekdays.map((d, i) => ({ value: i, label: d })), onChange: (v) => { S.f.dows = v; update(); } });
     $('fFrom').addEventListener('change', (e) => { S.f.from = e.target.value || S.model.period.from; if (S.f.from > S.f.to) { S.f.to = S.f.from; $('fTo').value = S.f.to; } update(); });
     $('fTo').addEventListener('change', (e) => { S.f.to = e.target.value || S.model.period.to; if (S.f.to < S.f.from) { S.f.from = S.f.to; $('fFrom').value = S.f.from; } update(); });
@@ -653,7 +705,7 @@
     $('fInd').addEventListener('change', (e) => { S.ind = e.target.value; update(); });
     $('fAttr').addEventListener('change', (e) => { S.attr = e.target.value; update(); });
     $('btnReset').addEventListener('click', () => {
-      S.f = { from: S.model.period.from, to: S.model.period.to, channels: [], dayparts: [], durations: [], dows: [] };
+      S.f = { from: S.model.period.from, to: S.model.period.to, channels: [], dayparts: [], durations: [], dows: [], weeks: [] };
       $('fFrom').value = S.f.from; $('fTo').value = S.f.to;
       Object.values(ms).forEach((m) => m.set([]));
       S.target = cfg.buyTarget; $('fTarget').value = S.target; S.ind = 'grp'; $('fInd').value = 'grp'; S.attr = 'aired'; $('fAttr').value = 'aired';
@@ -681,7 +733,7 @@
   }
   function applyView(v) {
     S.view = v;
-    document.body.classList.toggle('exec', v === 'exec'); document.body.classList.toggle('detail', v === 'detail');
+    document.body.classList.toggle('client', v === 'client'); document.body.classList.toggle('tech', v === 'tech');
     setSeg('viewSeg', 'data-v', v);
     setTimeout(C.resizeAll, 50); savePrefs();
   }
@@ -699,6 +751,11 @@
     bindSeg('logSeg', 'data-k', 'log');
     bindSeg('viewSeg', 'data-v', null, applyView);
     bindSeg('themeSeg', 'data-t', null, applyTheme);
+    document.querySelectorAll('.metric-seg').forEach((el) => el.addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      el.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+      S.ui.cd[el.getAttribute('data-dim')] = b.getAttribute('data-m'); update();
+    }));
     $('hmChDpMetric').addEventListener('change', (e) => { S.ui.hmChDp = e.target.value; update(); });
     $('qStatus').addEventListener('change', (e) => { S.ui.qStatus = e.target.value; update(); });
 
@@ -711,7 +768,7 @@
 
     // Importação
     const fileIn = $('fileIn'), drop = $('drop');
-    $('btnImport').addEventListener('click', () => { document.getElementById('dados').scrollIntoView(); fileIn.click(); });
+    $('btnImport').addEventListener('click', () => { if (S.view !== 'tech') applyView('tech'); document.getElementById('dados').scrollIntoView(); fileIn.click(); });
     drop.addEventListener('click', () => fileIn.click());
     drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('drag'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
@@ -773,7 +830,7 @@
       const meta = { campanha: 'Campanha importada', fonte: 'Dados importados (' + Array.from(files).map((f) => f.name).join(', ') + ')' };
       resetDims();
       loadModel({ meta, plan: res.plan, emissions: res.emissions, reach: res.reach });
-      ms.channels.refresh(); ms.durations.refresh(); ms.dayparts.refresh();
+      ms.channels.refresh(); ms.durations.refresh(); ms.dayparts.refresh(); ms.weeks.refresh();
       update();
       showMsg('importMsg', 'Importação concluída.\n' + res.log.join('\n') + (S.model.warnings.length ? '\n\nAvisos:\n' + S.model.warnings.slice(0, 12).join('\n') + (S.model.warnings.length > 12 ? '\n…' : '') : ''), true);
     } catch (e) {
@@ -793,7 +850,7 @@
     if (prefs.ind && E.indicators[prefs.ind]) { S.ind = prefs.ind; $('fInd').value = S.ind; }
     if (prefs.attr) { S.attr = prefs.attr; $('fAttr').value = S.attr; }
     initControls();
-    applyView(prefs.view || 'detail');
+    applyView(prefs.view === 'tech' ? 'tech' : 'client');
     applyTheme(prefs.theme || 'auto');
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.theme === 'auto') { C.theme(); update(); } });
   }

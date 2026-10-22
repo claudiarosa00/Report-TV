@@ -182,14 +182,14 @@ TV.engine = (function () {
   function filter(model, f, attribution) {
     const inSet = (arr, v) => !arr || !arr.length || arr.includes(v);
     const pass = (r) => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) &&
-      inSet(f.channels, r.channel) && inSet(f.dayparts, r.daypart) && inSet(f.durations, r.duration) && inSet(f.dows, r.dow);
+      inSet(f.channels, r.channel) && inSet(f.dayparts, r.daypart) && inSet(f.durations, r.duration) && inSet(f.dows, r.dow) && inSet(f.weeks, r.week);
     const real = model.real.map((r) => (attribution === 'bought' ? Object.assign({}, r, r.bought, { airedChannel: r.channel, airedDaypart: r.daypart, airedDuration: r.duration }) : r));
     return {
       plan: model.plan.filter(pass),
       real: real.filter(pass),
       notAired: model.notAired.filter(pass),
       restricted: !!((f.channels && f.channels.length) || (f.dayparts && f.dayparts.length) || (f.durations && f.durations.length) ||
-        (f.dows && f.dows.length) || (f.from && f.from > model.period.from) || (f.to && f.to < model.period.to))
+        (f.dows && f.dows.length) || (f.weeks && f.weeks.length) || (f.from && f.from > model.period.from) || (f.to && f.to < model.period.to))
     };
   }
 
@@ -288,7 +288,7 @@ TV.engine = (function () {
 
     let reach = { available: false, reason: '' };
     const rd = model.reach[t];
-    if (fr.restricted) reach.reason = 'Cobertura deduplicada só existe para o total da campanha. Com filtros de canal, faixa, secundagem, dia ou período não pode ser obtida por soma.';
+    if (fr.restricted) reach.reason = 'Só existe para o total da campanha (não se obtém por soma de canais, faixas ou semanas).';
     else if (!rd || !rd.plan || !rd.real) reach.reason = 'Sem dados de cobertura deduplicada para o target selecionado.';
     else reach = { available: true, plan: rd.plan, real: rd.real, freqP: div(p.grp, rd.plan.r1), freqR: div(r.grp, rd.real.r1) };
 

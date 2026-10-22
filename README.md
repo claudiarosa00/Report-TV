@@ -14,6 +14,10 @@ Abra `index.html` num browser moderno. Não precisa de servidor nem de instalaç
 
 Sem ligação à internet, as tabelas, os KPIs e a importação CSV continuam a funcionar.
 
+## Vistas
+- **Cliente** (predefinida): um resumo com o veredicto e 6 indicadores; **Por canal**, **Por faixa horária**, **Por secundagem** e **Por semana**, sempre planeado vs real, com um seletor GRPs / Spots / Investimento / CPP; e as conclusões. É também o que sai na impressão/PDF.
+- **Análise técnica**: junta as análises aprofundadas (decomposição de desvios, matrizes, eficiência, qualidade de entrega, waterfall, oportunidades, importação e metodologia).
+
 ## Estrutura
 ```
 index.html              layout e secções

@@ -73,6 +73,9 @@ TV.insights = (function () {
     if (topDu && isNum(topDu.wR)) push('info', 'O formato de ' + topDu.label + ' foi o que mais contribuiu para os resultados: ' + F().pct(topDu.wR * 100) + ' dos GRPs realizados.', 'Secundagem');
     const worstDw = minBy(dw.filter((x) => x.p.spots), (x) => x.grpPct);
     if (worstDw && worstDw.grpPct < -tol) push('neg', 'Dia da semana com maior desvio negativo: ' + worstDw.label + ' (' + F().signedPct(worstDw.grpPct) + ' de GRPs).', 'Dia da semana');
+    const worstWk = minBy((ctx.wk || []).filter((x) => x.p.spots), (x) => x.grpPct);
+    if (worstWk && worstWk.grpPct < -tol) push('neg', 'A semana ' + worstWk.label + ' foi a de maior subentrega: ' + F().signed(worstWk.grpDev, 1) + ' GRPs (' + F().signedPct(worstWk.grpPct) + ').', 'Semanas');
+    else if (worstWk) push('tol', 'Nenhuma semana ficou abaixo da tolerância de ±' + tol + '% em GRPs.', 'Semanas');
     const q = ctx.quality;
     if (q && q.comp > 0) push('info', 'Foram emitidos ' + q.comp + ' spots de compensação sem custo, que geraram ' + F().n(q.compGrp, 1) + ' GRPs.', 'Qualidade de entrega');
     if (s.reach.available) {

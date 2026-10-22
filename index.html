@@ -13,7 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-<body class="detail">
+<body class="client">
 <div class="app">
   <!-- ============ Navegação lateral ============ -->
   <aside class="sidebar" aria-label="Navegação">
@@ -23,23 +23,27 @@
     </div>
     <nav class="nav" id="nav">
       <div class="nav-title">Relatório</div>
-      <a href="#resumo" class="active"><span class="ix">01</span>Resumo executivo</a>
-      <a href="#faixas"><span class="ix">02</span>Faixas horárias</a>
-      <a href="#canais"><span class="ix">03</span>Canais</a>
-      <a href="#secundagem"><span class="ix">04</span>Secundagem</a>
-      <a href="#evolucao"><span class="ix">05</span>Evolução e dias</a>
-      <a href="#cruzada"><span class="ix">06</span>Canal × faixa</a>
-      <a href="#eficiencia"><span class="ix">07</span>Eficiência</a>
-      <a href="#qualidade"><span class="ix">08</span>Qualidade de entrega</a>
-      <a href="#contributo"><span class="ix">09</span>Contributo p/ desvio</a>
-      <a href="#oportunidades"><span class="ix">10</span>Oportunidades</a>
-      <div class="nav-title">Conclusões</div>
-      <a href="#analise"><span class="ix">11</span>Análise e comentários</a>
-      <a href="#dados"><span class="ix">12</span>Dados e metodologia</a>
+      <a href="#resumo" class="active"><span class="ix">01</span>Resumo</a>
+      <a href="#v-channel"><span class="ix">02</span>Por canal</a>
+      <a href="#v-daypart"><span class="ix">03</span>Por faixa horária</a>
+      <a href="#v-duration"><span class="ix">04</span>Por secundagem</a>
+      <a href="#v-week"><span class="ix">05</span>Por semana</a>
+      <a href="#analise"><span class="ix">06</span>Conclusões</a>
+      <div class="nav-title tech-only">Análise técnica</div>
+      <a class="tech-only" href="#faixas"><span class="ix">·</span>Faixas: desvios</a>
+      <a class="tech-only" href="#canais"><span class="ix">·</span>Canais: ranking</a>
+      <a class="tech-only" href="#secundagem"><span class="ix">·</span>Secundagem: eq. 30"</a>
+      <a class="tech-only" href="#evolucao"><span class="ix">·</span>Evolução e dias</a>
+      <a class="tech-only" href="#cruzada"><span class="ix">·</span>Canal × faixa</a>
+      <a class="tech-only" href="#eficiencia"><span class="ix">·</span>Eficiência</a>
+      <a class="tech-only" href="#qualidade"><span class="ix">·</span>Qualidade de entrega</a>
+      <a class="tech-only" href="#contributo"><span class="ix">·</span>Contributo p/ desvio</a>
+      <a class="tech-only" href="#oportunidades"><span class="ix">·</span>Oportunidades</a>
+      <a class="tech-only" href="#dados"><span class="ix">·</span>Dados e metodologia</a>
     </nav>
     <div class="sidebar-foot">
       <div class="nav-title seg-label">Visão</div>
-      <div class="seg block" id="viewSeg"><button data-v="exec">Executiva</button><button data-v="detail" class="on">Detalhada</button></div>
+      <div class="seg block" id="viewSeg"><button data-v="client" class="on">Cliente</button><button data-v="tech">Análise técnica</button></div>
       <div class="nav-title seg-label">Tema</div>
       <div class="seg block" id="themeSeg"><button data-t="auto" class="on">Auto</button><button data-t="light">Claro</button><button data-t="dark">Escuro</button></div>
     </div>
@@ -67,12 +71,13 @@
       <div class="f-item"><label>Canal</label><div id="fChannel"></div></div>
       <div class="f-item"><label>Faixa horária</label><div id="fDaypart"></div></div>
       <div class="f-item"><label>Secundagem</label><div id="fDuration"></div></div>
-      <div class="f-item"><label>Dia da semana</label><div id="fDow"></div></div>
+      <div class="f-item"><label>Semana</label><div id="fWeek"></div></div>
+      <div class="f-item tech-only"><label>Dia da semana</label><div id="fDow"></div></div>
       <div class="f-item"><label for="fTarget">Target</label><select class="f-ctl" id="fTarget"></select></div>
-      <div class="f-item"><label for="fInd">Indicador</label><select class="f-ctl" id="fInd">
+      <div class="f-item tech-only"><label for="fInd">Indicador</label><select class="f-ctl" id="fInd">
         <option value="grp">GRPs</option><option value="spots">Spots</option><option value="cost">Investimento</option>
         <option value="rating">Rating médio</option><option value="cpp">CPP</option><option value="cpm">CPM</option></select></div>
-      <div class="f-item detail-only"><label for="fAttr">Atribuição <i class="info" data-tip="Por emissão real: o realizado conta no canal/faixa/secundagem onde foi efetivamente emitido. Por linha de compra: conta na linha do plano que lhe deu origem (útil para avaliar cada compra).">i</i></label>
+      <div class="f-item tech-only"><label for="fAttr">Atribuição <i class="info" data-tip="Por emissão real: o realizado conta no canal/faixa/secundagem onde foi efetivamente emitido. Por linha de compra: conta na linha do plano que lhe deu origem (útil para avaliar cada compra).">i</i></label>
         <select class="f-ctl" id="fAttr"><option value="aired">Por emissão real</option><option value="bought">Por linha de compra</option></select></div>
       <div class="f-sep"></div>
       <button class="btn ghost" id="btnReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Repor filtros</button>
@@ -83,19 +88,69 @@
     <div class="content">
       <!-- 01 RESUMO EXECUTIVO -->
       <section class="sec" id="resumo">
-        <div class="section-head"><div><h2><span class="ix">01</span>Resumo executivo</h2><p>Planeado vs. realizado para os filtros ativos. Cada indicador mostra o valor realizado, o planeado, a diferença absoluta e o desvio percentual.</p></div></div>
+        <div class="section-head"><div><h2><span class="ix">01</span>Resumo da campanha</h2><p>O que foi planeado e o que foi efetivamente entregue.</p></div></div>
+        <div class="verdict-bar" id="verdict"></div>
         <div class="kpi-grid" id="kpis"></div>
-        <div class="comp-grid" id="compliance"></div>
-        <div class="card" style="margin-top:16px">
+        <div class="comp-grid tech-only" id="compliance"></div>
+        <div class="card tech-only" style="margin-top:16px">
           <div class="card-head"><div><h3>Respostas-chave</h3><div class="hint">Leitura rápida gerada a partir dos dados filtrados</div></div></div>
           <div class="qa" id="qa"></div>
         </div>
         <div class="sec-comments" data-sec="resumo"></div>
       </section>
 
+
+      <!-- 02 POR CANAL -->
+      <section class="sec" id="v-channel">
+        <div class="section-head"><div><h2><span class="ix">02</span>Por canal</h2><p class="lead" id="lead-channel"></p></div>
+          <div class="seg metric-seg" data-dim="channel"><button data-m="grp" class="on">GRPs</button><button data-m="spots">Spots</button><button data-m="cost">Investimento</button><button data-m="cpp">CPP</button></div></div>
+        <div class="grid g2 cd-grid">
+          <div class="card"><div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Real</span></div>
+            <div class="chart-box"><canvas id="cd-channel"></canvas></div></div>
+          <div class="card"><div id="cdt-channel"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="v-channel"></div>
+      </section>
+
+      <!-- 03 POR FAIXA HORÁRIA -->
+      <section class="sec" id="v-daypart">
+        <div class="section-head"><div><h2><span class="ix">03</span>Por faixa horária</h2><p class="lead" id="lead-daypart"></p></div>
+          <div class="seg metric-seg" data-dim="daypart"><button data-m="grp" class="on">GRPs</button><button data-m="spots">Spots</button><button data-m="cost">Investimento</button><button data-m="cpp">CPP</button></div></div>
+        <div class="grid g2 cd-grid">
+          <div class="card"><div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Real</span></div>
+            <div class="chart-box"><canvas id="cd-daypart"></canvas></div></div>
+          <div class="card"><div id="cdt-daypart"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="v-daypart"></div>
+      </section>
+
+      <!-- 04 POR SECUNDAGEM -->
+      <section class="sec" id="v-duration">
+        <div class="section-head"><div><h2><span class="ix">04</span>Por secundagem</h2><p class="lead" id="lead-duration"></p></div>
+          <div class="seg metric-seg" data-dim="duration"><button data-m="grp" class="on">GRPs</button><button data-m="spots">Spots</button><button data-m="cost">Investimento</button><button data-m="cpp">CPP</button></div></div>
+        <div class="grid g2 cd-grid">
+          <div class="card"><div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Real</span></div>
+            <div class="chart-box"><canvas id="cd-duration"></canvas></div></div>
+          <div class="card"><div id="cdt-duration"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="v-duration"></div>
+      </section>
+
+      <!-- 05 POR SEMANA -->
+      <section class="sec" id="v-week">
+        <div class="section-head"><div><h2><span class="ix">05</span>Por semana</h2><p class="lead" id="lead-week"></p></div>
+          <div class="seg metric-seg" data-dim="week"><button data-m="grp" class="on">GRPs</button><button data-m="spots">Spots</button><button data-m="cost">Investimento</button><button data-m="cpp">CPP</button></div></div>
+        <div class="grid g2 cd-grid">
+          <div class="card"><div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Real</span></div>
+            <div class="chart-box"><canvas id="cd-week"></canvas></div></div>
+          <div class="card"><div id="cdt-week"></div></div>
+        </div>
+        <div class="sec-comments" data-sec="v-week"></div>
+      </section>
+
       <!-- 02 FAIXAS HORÁRIAS -->
-      <section class="sec" id="faixas">
-        <div class="section-head"><div><h2><span class="ix">02</span>Análise por faixa horária <span class="prio">Prioridade máxima</span></h2>
+      <section class="sec tech-only" id="faixas">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Análise por faixa horária <span class="prio">Prioridade máxima</span></h2>
           <p>A campanha foi comprada por faixa horária. Separa-se o <b>desvio de entrega</b> (nº de spots) do <b>desvio de audiência</b> (rating médio por spot): uma faixa pode cumprir as inserções e gerar menos GRPs.</p></div></div>
         <div class="grid g2">
           <div class="card"><div class="card-head"><div><h3>GRPs por faixa — planeado vs realizado</h3><div class="hint" id="dpGrpHint"></div></div></div>
@@ -120,8 +175,8 @@
       </section>
 
       <!-- 03 CANAIS -->
-      <section class="sec" id="canais">
-        <div class="section-head"><div><h2><span class="ix">03</span>Análise por canal</h2><p>Distribuição de investimento e spots, GRPs, rating e CPP por canal, com classificação de desempenho e contributo para o resultado global.</p></div></div>
+      <section class="sec tech-only" id="canais">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Análise por canal</h2><p>Distribuição de investimento e spots, GRPs, rating e CPP por canal, com classificação de desempenho e contributo para o resultado global.</p></div></div>
         <div class="grid g2">
           <div class="card"><div class="card-head"><div><h3>GRPs por canal</h3><div class="hint">Planeado vs realizado</div></div></div>
             <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
@@ -141,8 +196,8 @@
       </section>
 
       <!-- 04 SECUNDAGEM -->
-      <section class="sec" id="secundagem">
-        <div class="section-head"><div><h2><span class="ix">04</span>Análise por secundagem</h2><p>Duração, entrega de audiência e custo são analisados separadamente: um spot mais longo <b>não</b> gera, por si só, mais audiência — o rating mede a audiência média do intervalo onde o spot é emitido.</p></div></div>
+      <section class="sec tech-only" id="secundagem">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Análise por secundagem</h2><p>Duração, entrega de audiência e custo são analisados separadamente: um spot mais longo <b>não</b> gera, por si só, mais audiência — o rating mede a audiência média do intervalo onde o spot é emitido.</p></div></div>
         <div class="grid g2">
           <div class="card"><div class="card-head"><div><h3>Spots por formato</h3><div class="hint">Planeado vs realizado</div></div></div>
             <div class="legend"><span><i style="background:var(--plan)"></i>Planeado</span><span><i style="background:var(--real)"></i>Realizado</span></div>
@@ -164,8 +219,8 @@
       </section>
 
       <!-- 05 EVOLUÇÃO -->
-      <section class="sec" id="evolucao">
-        <div class="section-head"><div><h2><span class="ix">05</span>Evolução temporal e dia da semana</h2><p>Comparação diária/semanal e acumulada para identificar períodos de subentrega ou sobreentrega. O indicador segue o filtro <b>Indicador</b>.</p></div></div>
+      <section class="sec tech-only" id="evolucao">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Evolução temporal e dia da semana</h2><p>Comparação diária/semanal e acumulada para identificar períodos de subentrega ou sobreentrega. O indicador segue o filtro <b>Indicador</b>.</p></div></div>
         <div class="grid g2">
           <div class="card span2"><div class="card-head"><div><h3 id="evoTitle">Evolução</h3><div class="hint">Planeado (tracejado) vs realizado</div></div>
             <div class="card-tools"><div class="seg" id="evoSeg"><button data-g="date" class="on">Diário</button><button data-g="week">Semanal</button></div></div></div>
@@ -184,8 +239,8 @@
       </section>
 
       <!-- 06 CANAL × FAIXA -->
-      <section class="sec" id="cruzada">
-        <div class="section-head"><div><h2><span class="ix">06</span>Canal × faixa horária</h2><p>Matriz cruzada para perceber se os desvios se concentram num canal, numa faixa ou numa combinação específica.</p></div></div>
+      <section class="sec tech-only" id="cruzada">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Canal × faixa horária</h2><p>Matriz cruzada para perceber se os desvios se concentram num canal, numa faixa ou numa combinação específica.</p></div></div>
         <div class="card"><div class="card-head"><div><h3>Matriz cruzada</h3><div class="hint" id="hmChDpHint"></div></div>
           <div class="card-tools"><select class="f-ctl" id="hmChDpMetric">
             <option value="grpDev">Desvio de GRPs (%)</option><option value="grpAbs">Desvio de GRPs (absoluto)</option><option value="spotDev">Desvio de spots (%)</option>
@@ -197,8 +252,8 @@
       </section>
 
       <!-- 07 EFICIÊNCIA -->
-      <section class="sec" id="eficiencia">
-        <div class="section-head"><div><h2><span class="ix">07</span>Eficiência de investimento</h2><p>CPP e CPM por dimensão. Eficiência de custo <b>não</b> é o mesmo que cumprimento contratual: uma faixa pode ser barata por ponto e, ainda assim, não ter entregue o que foi comprado.</p></div>
+      <section class="sec tech-only" id="eficiencia">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Eficiência de investimento</h2><p>CPP e CPM por dimensão. Eficiência de custo <b>não</b> é o mesmo que cumprimento contratual: uma faixa pode ser barata por ponto e, ainda assim, não ter entregue o que foi comprado.</p></div>
           <div class="seg" id="effSeg"><button data-d="channel" class="on">Canal</button><button data-d="daypart">Faixa</button><button data-d="duration">Secundagem</button></div></div>
         <div class="grid g2">
           <div class="card"><div class="card-head"><div><h3>CPP — planeado vs realizado <i class="info" data-tip="Cost per Point: investimento ÷ GRPs no target selecionado. Menor é melhor.">i</i></h3></div></div>
@@ -215,8 +270,8 @@
       </section>
 
       <!-- 08 QUALIDADE -->
-      <section class="sec" id="qualidade">
-        <div class="section-head"><div><h2><span class="ix">08</span>Qualidade de entrega</h2><p>Emissões contratualmente válidas vs. emissões fora das condições acordadas (fora de faixa, substituições, desvios de secundagem), spots não emitidos, adicionais e compensações.</p></div></div>
+      <section class="sec tech-only" id="qualidade">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Qualidade de entrega</h2><p>Emissões contratualmente válidas vs. emissões fora das condições acordadas (fora de faixa, substituições, desvios de secundagem), spots não emitidos, adicionais e compensações.</p></div></div>
         <div class="kpi-grid" id="qTiles"></div>
         <div class="grid g2" style="margin-top:16px">
           <div class="card"><div class="card-head"><div><h3>Estado das emissões por canal</h3><div class="hint">Nº de spots (inclui não emitidos)</div></div></div>
@@ -232,8 +287,8 @@
       </section>
 
       <!-- 09 CONTRIBUTO -->
-      <section class="sec" id="contributo">
-        <div class="section-head"><div><h2><span class="ix">09</span>Contributo para o desvio global</h2><p>Que canais, faixas e formatos explicam a diferença entre o planeado e o realizado.</p></div>
+      <section class="sec tech-only" id="contributo">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Contributo para o desvio global</h2><p>Que canais, faixas e formatos explicam a diferença entre o planeado e o realizado.</p></div>
           <div class="seg" id="wfSeg"><button data-d="channel" class="on">Canal</button><button data-d="daypart">Faixa</button><button data-d="duration">Secundagem</button><button data-d="dow">Dia</button></div></div>
         <div class="grid g2">
           <div class="card span2"><div class="card-head"><div><h3 id="wfTitle">Waterfall</h3><div class="hint" id="wfHint"></div></div></div>
@@ -245,8 +300,8 @@
       </section>
 
       <!-- 10 OPORTUNIDADES -->
-      <section class="sec" id="oportunidades">
-        <div class="section-head"><div><h2><span class="ix">10</span>Ranking de oportunidades</h2><p>Combinações canal × faixa ordenadas pelo potencial de otimização, combinando audiência (rating vs plano), custo (CPP vs média da campanha) e cumprimento do plano.</p></div></div>
+      <section class="sec tech-only" id="oportunidades">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Ranking de oportunidades</h2><p>Combinações canal × faixa ordenadas pelo potencial de otimização, combinando audiência (rating vs plano), custo (CPP vs média da campanha) e cumprimento do plano.</p></div></div>
         <div class="card"><div class="card-head"><div><h3>Combinações canal × faixa</h3><div class="hint" id="oppHint"></div></div>
           <div class="card-tools"><div class="seg" id="oppSeg"><button data-f="all" class="on">Todas</button><button data-f="Reforçar">Reforçar</button><button data-f="Reduzir / renegociar">Reduzir</button><button data-f="Exigir compensação">Compensação</button></div></div></div>
           <div id="tbOpp"></div>
@@ -256,7 +311,7 @@
 
       <!-- 11 ANÁLISE E COMENTÁRIOS -->
       <section class="sec" id="analise">
-        <div class="section-head"><div><h2><span class="ix">11</span>Análise e comentários</h2><p>Conclusões automáticas (geradas a partir dos valores apresentados), comentários do analista e recomendações para futuras campanhas.</p></div></div>
+        <div class="section-head"><div><h2><span class="ix">06</span>Conclusões e recomendações</h2><p>Leitura dos resultados, comentários do analista e próximos passos.</p></div></div>
         <div class="grid g2">
           <div class="card"><div class="card-head"><div><h3>A. Principais conclusões</h3><div class="hint">Atualizadas com os filtros ativos</div></div></div>
             <ul class="insights" id="concl"></ul></div>
@@ -284,8 +339,8 @@
       </section>
 
       <!-- 12 DADOS -->
-      <section class="sec" id="dados">
-        <div class="section-head"><div><h2><span class="ix">12</span>Dados e metodologia</h2><p>Importação de ficheiros, configuração da estrutura de compra e regras de cálculo.</p></div></div>
+      <section class="sec tech-only" id="dados">
+        <div class="section-head"><div><h2><span class="ix">Técnico</span>Dados e metodologia</h2><p>Importação de ficheiros, configuração da estrutura de compra e regras de cálculo.</p></div></div>
         <div class="grid g2">
           <div class="card no-print"><div class="card-head"><div><h3>Importar dados</h3><div class="hint">CSV ou Excel — plano de media, registo de emissões e (opcional) cobertura</div></div></div>
             <div class="dropzone" id="drop">Arraste ficheiros para aqui ou <b>clique para escolher</b><br><span class="t-mute" style="font-size:12px">Aceita vários ficheiros CSV ou um .xlsx com folhas Plano / Emissoes / Cobertura</span></div>
