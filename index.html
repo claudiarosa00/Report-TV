@@ -12,6 +12,9 @@
 <!-- Dependências externas (CDN): Chart.js (gráficos) e SheetJS (leitura/escrita Excel) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Relatório Excel do cliente: ExcelJS (formatação) + JSZip (gráficos nativos) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="client">
 <div class="app">
@@ -58,7 +61,7 @@
       </div>
       <div class="actions">
         <button class="btn" id="btnImport" data-tip="Importar plano, emissões e cobertura (CSV ou Excel)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Importar</button>
-        <button class="btn" id="btnXlsx" data-tip="Exporta todas as tabelas de análise + dados brutos para Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Excel</button>
+        <button class="btn" id="btnXlsx" data-tip="Relatório Excel para o cliente: resumo, quadros por canal, faixa, secundagem e semana, gráficos e conclusões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Excel</button>
         <button class="btn" id="btnPdf" data-tip="Gera o relatório em PDF através da janela de impressão (escolha 'Guardar como PDF')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>PDF</button>
         <button class="btn primary" id="btnPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7"/></svg>Imprimir</button>
       </div>
@@ -348,6 +351,7 @@
             <div class="msg" id="importMsg"></div>
             <div class="form-row" style="margin-top:12px">
               <button class="btn" id="btnTemplate">⇩ Modelo de importação (.xlsx)</button>
+              <button class="btn" id="btnXlsxTech">⇩ Dados técnicos (.xlsx)</button>
               <button class="btn" id="btnDemo">↺ Repor dados de demonstração</button>
             </div></div>
           <div class="card no-print"><div class="card-head"><div><h3>Estrutura de compra</h3><div class="hint">Adapte as faixas horárias e a tolerância à estrutura real da campanha</div></div></div>
@@ -382,6 +386,7 @@
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/insights.js"></script>
 <script src="assets/js/io.js"></script>
+<script src="assets/js/excel-report.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

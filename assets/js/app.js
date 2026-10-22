@@ -167,6 +167,7 @@
     const vtxt = { pos: 'Plano cumprido', tol: 'Plano cumprido parcialmente', neg: 'Plano não cumprido', na: 'Sem dados suficientes' }[c.overall];
     const vcol = { pos: 'var(--good)', tol: 'var(--warn)', neg: 'var(--bad)', na: 'var(--plan)' }[c.overall];
     const gp = E.devPct(s.r.grp, s.p.grp), cp = E.devPct(E.div(s.r.cost, s.r.grp), E.div(s.p.cost, s.p.grp));
+    ctx.verdict = { st: c.overall, title: vtxt, text: 'Foram entregues ' + F.n(s.r.grp, 1) + ' GRPs (' + ctx.targetLabel + ') face a ' + F.n(s.p.grp, 1) + ' planeados (' + F.signedPct(gp) + '), com ' + F.n(s.r.spots) + ' spots emitidos (' + F.n(s.p.spots) + ' planeados) e um custo por ponto de ' + F.eur(E.div(s.r.cost, s.r.grp)) + ' (' + F.signedPct(cp) + ' face ao plano).' };
     $('verdict').style.setProperty('--vcol', vcol);
     $('verdict').innerHTML = '<b>' + vtxt + '</b><p>Foram entregues <b>' + F.n(s.r.grp, 1) + ' GRPs</b> (' + U.esc(ctx.targetLabel) + ') face a ' + F.n(s.p.grp, 1) + ' planeados (' + F.signedPct(gp) + '), com ' +
       F.n(s.r.spots) + ' spots emitidos (' + F.n(s.p.spots) + ' planeados) e um custo por ponto de ' + F.eur(E.div(s.r.cost, s.r.grp)) + ' (' + F.signedPct(cp) + ' face ao plano).</p>';
@@ -197,16 +198,7 @@
 
       // Frase de leitura: total e maiores desvios
       const totP = E.val(ctx.s.p, m), totR = E.val(ctx.s.r, m);
-      const cands = list.filter((x) => isNum(P(x)) && isNum(R(x)) && P(x) > 0).map((x) => ({ x, dv: R(x) - P(x), pct: E.devPct(R(x), P(x)) }));
-      const key = d.additive ? 'dv' : 'pct';
-      const lo = cands.slice().sort((a, b) => a[key] - b[key])[0], hi = cands.slice().sort((a, b) => b[key] - a[key])[0];
-      const part = (o, txt, cls) => '<span class="' + cls + '">' + U.esc(o.x.label) + '</span>' + txt + ' (' + (d.additive ? F.signed(o.dv, d.dec, unit) + ', ' : '') + F.signedPct(o.pct) + ')';
-      const loCls = d.dir === 'lower' ? 't-pos' : d.dir === 'neutral' ? '' : 't-neg';
-      const hiCls = d.dir === 'lower' ? 't-neg' : d.dir === 'neutral' ? '' : 't-pos';
-      const bits = [d.label + ' total: ' + F.ind(totP, m) + ' planeado → <b>' + F.ind(totR, m) + '</b> real (' + F.signedPct(E.devPct(totR, totP)) + ').'];
-      if (lo && lo[key] < 0) bits.push(d.dir === 'lower' ? 'Mais barato face ao plano: ' + part(lo, '', loCls) + '.' : 'Maior quebra: ' + part(lo, '', loCls) + '.');
-      if (hi && hi[key] > 0) bits.push(d.dir === 'lower' ? 'Mais caro face ao plano: ' + part(hi, '', hiCls) + '.' : 'Maior ganho: ' + part(hi, '', hiCls) + '.');
-      $('lead-' + dim).innerHTML = bits.join(' ');
+      $('lead-' + dim).innerHTML = I.lead(list, m, totP, totR).map((g) => (g.cls === 'b' ? '<b>' + U.esc(g.text) + '</b>' : g.cls ? '<span class="' + g.cls + '">' + U.esc(g.text) + '</span>' : U.esc(g.text))).join('');
 
       const tp = list.reduce((a, x) => a + (P(x) || 0), 0), tr = list.reduce((a, x) => a + (R(x) || 0), 0);
       list.forEach((x, i) => { x.sortKey = i; });
@@ -760,7 +752,8 @@
     $('qStatus').addEventListener('change', (e) => { S.ui.qStatus = e.target.value; update(); });
 
     // Exportações e impressão
-    $('btnXlsx').addEventListener('click', () => { TV.io.exportWorkbook(S.raw, U.tableRegistry(), 'pos_avaliacao_tv'); });
+    $('btnXlsx').addEventListener('click', exportClientExcel);
+    $('btnXlsxTech').addEventListener('click', () => { TV.io.exportWorkbook(S.raw, U.tableRegistry(), 'pos_avaliacao_tv_dados_tecnicos'); });
     $('btnPrint').addEventListener('click', () => window.print());
     $('btnPdf').addEventListener('click', () => { U.toast('Na janela de impressão escolha "Guardar como PDF" (orientação paisagem).'); setTimeout(() => window.print(), 600); });
     $('btnTemplate').addEventListener('click', () => TV.io.exportTemplate(S.raw));
@@ -819,6 +812,35 @@
     }, { rootMargin: '-30% 0px -60% 0px' });
     document.querySelectorAll('section.sec').forEach((s) => obs.observe(s));
     window.addEventListener('beforeprint', () => { $('printFilters').textContent = activeFiltersText().text; });
+  }
+
+  /* Relatório Excel para o cliente (quadros formatados, gráficos nativos e análises). */
+  async function exportClientExcel() {
+    if (!TV.excelReport.available()) { U.toast('Bibliotecas de Excel indisponíveis (sem internet?) — exportados os dados em formato simples.'); TV.io.exportWorkbook(S.raw, U.tableRegistry(), 'pos_avaliacao_tv'); return; }
+    const btn = $('btnXlsx'); btn.disabled = true; U.toast('A gerar o relatório Excel…');
+    try {
+      const m = S.model.meta, conclusions = I.conclusions(ctx);
+      const caps = { 'Resumo executivo': 2, 'Canais': 2, 'Faixas horárias': 1, 'Secundagem': 1, 'Semanas': 1, 'Eficiência': 1 }, used = {};
+      conclusions.forEach((c) => { used[c.sec] = (used[c.sec] || 0) + 1; c.client = used[c.sec] <= (caps[c.sec] || 0); });
+      const planById = new Map(S.model.plan.map((p) => [p.id, p]));
+      const toDate = (iso) => new Date(iso + 'T00:00:00Z');
+      const rows = ctx.fr.real.map((r) => ({ date: toDate(r.date), dow: cfg.weekdaysShort[r.dow], time: r.time, channel: r.airedChannel || r.channel, daypart: r.airedDaypart || r.daypart, duration: r.airedDuration || r.duration, rating: r.ratings[S.target], cost: r.cost, status: cfg.statuses[r.status].label, valid: r.valid, planId: r.planId, id: r.id, iso: r.date }))
+        .concat(ctx.fr.notAired.map((p) => ({ date: toDate(p.date), dow: cfg.weekdaysShort[p.dow], time: p.time, channel: p.channel, daypart: p.daypart, duration: p.duration, rating: null, cost: 0, status: cfg.statuses.nao_emitido.label, valid: false, planId: p.id, id: '', iso: p.date })))
+        .sort((a, b) => (a.iso + (a.time || '')).localeCompare(b.iso + (b.time || '')));
+      const blob = await TV.excelReport.build({
+        meta: m, s: ctx.s, tol: cfg.tolerance, targetLabel: ctx.targetLabel, buyTargetLabel: targetObj(cfg.buyTarget).label,
+        headline: [m.anunciante, m.produto, 'Período ' + E.fmtDM(S.model.period.from) + '–' + E.fmtDM(S.model.period.to) + '/' + S.model.period.to.slice(0, 4), m.fonte].filter(Boolean).join(' · '),
+        filters: activeFiltersText().text.replace(/ · Indicador: [^·]+/, ''),
+        verdict: ctx.verdict, dims: { channel: ctx.ch, daypart: ctx.dp, duration: ctx.du, week: ctx.wk },
+        conclusions, recos: ctx.recos, userRecos: store.get(LS.recos, []),
+        comments: store.get(LS.comments, []).map((c) => Object.assign({ secName: secName(c.sec) }, c)),
+        rows, method: Array.from($('method').querySelectorAll('dt')).map((dt) => [dt.textContent, dt.nextElementSibling.textContent])
+      });
+      const name = 'Relatorio_TV_' + String(m.campanha || 'campanha').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '_') + '.xlsx';
+      U.download(name, blob);
+      U.toast('Relatório Excel gerado.');
+    } catch (e) { console.error(e); U.toast('Erro ao gerar o Excel: ' + e.message); }
+    btn.disabled = false;
   }
 
   function showMsg(id, text, ok) { const m = $(id); m.textContent = text; m.className = 'msg on ' + (ok ? 'ok' : 'err'); return false; }

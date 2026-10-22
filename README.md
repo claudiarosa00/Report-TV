@@ -9,7 +9,8 @@ Abra `index.html` num browser moderno. Não precisa de servidor nem de instalaç
 | Dependência | Uso | Origem |
 |---|---|---|
 | Chart.js 4.4.1 | Gráficos | cdnjs.cloudflare.com |
-| SheetJS (xlsx) 0.18.5 | Importar/exportar Excel | cdnjs.cloudflare.com |
+| SheetJS (xlsx) 0.18.5 | Importar Excel / exportar dados técnicos | cdnjs.cloudflare.com |
+| ExcelJS 4.4.0 + JSZip 3.10.1 | Relatório Excel do cliente (formatação + gráficos nativos) | cdnjs.cloudflare.com |
 | Inter | Tipografia (opcional) | Google Fonts |
 
 Sem ligação à internet, as tabelas, os KPIs e a importação CSV continuam a funcionar.
@@ -17,6 +18,14 @@ Sem ligação à internet, as tabelas, os KPIs e a importação CSV continuam a 
 ## Vistas
 - **Cliente** (predefinida): um resumo com o veredicto e 6 indicadores; **Por canal**, **Por faixa horária**, **Por secundagem** e **Por semana**, sempre planeado vs real, com um seletor GRPs / Spots / Investimento / CPP; e as conclusões. É também o que sai na impressão/PDF.
 - **Análise técnica**: junta as análises aprofundadas (decomposição de desvios, matrizes, eficiência, qualidade de entrega, waterfall, oportunidades, importação e metodologia).
+
+## Relatório Excel (botão **Excel**)
+Gera um `.xlsx` para o cliente, com os filtros ativos:
+- **Resumo**: veredicto, indicadores planeado vs real com avaliação colorida, cumprimento do plano, destaques e gráficos de GRPs por canal e por semana.
+- **Por canal / Por faixa horária / Por secundagem / Por semana**: leitura automática, um quadro com spots, GRPs, investimento, CPP e peso (desvios, totais e CPP calculados por fórmula) e 4 gráficos nativos do Excel, editáveis e ligados às células.
+- **Conclusões** (conclusões, recomendações e comentários do analista), **Registo de emissões** (com filtros) e **Metodologia**.
+
+Em *Dados e metodologia* continua disponível a exportação técnica (todas as tabelas + dados brutos).
 
 ## Estrutura
 ```
@@ -28,7 +37,8 @@ assets/js/engine.js     normalização dos dados, filtros, agregações e regras
 assets/js/ui.js         formatação pt-PT, tabelas ordenáveis/CSV, heatmaps, multi-select, tooltips
 assets/js/charts.js     gráficos (Chart.js) ligados aos tokens de cor
 assets/js/insights.js   conclusões, respostas-chave e recomendações automáticas
-assets/js/io.js         importação CSV/Excel e exportação Excel/modelo
+assets/js/io.js         importação CSV/Excel e exportação técnica/modelo
+assets/js/excel-report.js relatório Excel do cliente (ExcelJS + gráficos nativos via JSZip)
 assets/js/app.js        estado, filtros e renderização das secções
 ```
 

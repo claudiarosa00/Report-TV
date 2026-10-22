@@ -170,5 +170,22 @@ TV.insights = (function () {
     return out;
   }
 
-  return { enrich, conclusions, qa, recommendations };
+  /* Frase de leitura de uma dimensão para um indicador: total + maior quebra/ganho.
+   * Devolve segmentos {text, cls} (cls: 'b' destaque, 't-pos'/'t-neg' cor de estado). */
+  function lead(list, m, totP, totR) {
+    const d = E().indicators[m], unit = d.unit === '€' ? ' €' : '';
+    const P = (x) => E().val(x.p, m), R = (x) => E().val(x.r, m);
+    const c = list.filter((x) => isNum(P(x)) && isNum(R(x)) && P(x) > 0).map((x) => ({ x, dv: R(x) - P(x), pct: E().devPct(R(x), P(x)) }));
+    const key = d.additive ? 'dv' : 'pct';
+    const lo = c.slice().sort((a, b) => a[key] - b[key])[0], hi = c.slice().sort((a, b) => b[key] - a[key])[0];
+    const det = (o) => ' (' + (d.additive ? F().signed(o.dv, d.dec, unit) + ', ' : '') + F().signedPct(o.pct) + ').';
+    const words = d.dir === 'lower' ? ['Mais barato face ao plano: ', 'Mais caro face ao plano: '] : d.dir === 'neutral' ? ['Maior redução: ', 'Maior aumento: '] : ['Maior quebra: ', 'Maior ganho: '];
+    const cls = d.dir === 'lower' ? ['t-pos', 't-neg'] : d.dir === 'neutral' ? ['', ''] : ['t-neg', 't-pos'];
+    const seg = [{ text: d.label + ' total: ' + F().ind(totP, m) + ' planeado → ' }, { text: F().ind(totR, m), cls: 'b' }, { text: ' real (' + F().signedPct(E().devPct(totR, totP)) + ').' }];
+    if (lo && lo[key] < 0) seg.push({ text: ' ' + words[0] }, { text: lo.x.label, cls: cls[0] }, { text: det(lo) });
+    if (hi && hi[key] > 0) seg.push({ text: ' ' + words[1] }, { text: hi.x.label, cls: cls[1] }, { text: det(hi) });
+    return seg;
+  }
+
+  return { enrich, conclusions, qa, recommendations, lead };
 })();
